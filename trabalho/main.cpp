@@ -1,5 +1,7 @@
 #include "raylib.h"
 #include <iostream>
+#include <cmath>
+#include <string>
 
 using namespace std;
 
@@ -17,11 +19,16 @@ Vector2 plataformaPosicao = {350.0f, 550.0f};
 Vector2 plataformaPosicaoFim = {450.0f, 550.0f};
 Vector2 plataformaTamanho = {100.0f, 20.0f};
 Color cor = MAROON;
+struct Player
+{
+  int maiorPontuacao, pontuacaoAtual;
+  string nome;
+};
+
 
 // Pelota
 Vector2 bolaPosicao = {400.0f, 539.0f};
 Vector2 bolaPosicaoFutura;
-const int bolaTamanho = 10;
 
 // Movimentação da bola
 int direcao = -1;
@@ -121,80 +128,50 @@ int main() {
     }
 
     // Verifica colisão
-    for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++) {
-        for (int j = 0; j < QUANTIDADEBLOCOS; j++) {
-            // Pontos laterais
-            Vector2 esq1 = {blocos[i][j].bloco.x, blocos[i][j].bloco.y};
-            Vector2 esq2 = {blocos[i][j].bloco.x, blocos[i][j].bloco.y + ALTURABLOCO};
+    Vector2 futuraX = { bolaPosicao.x + (bolaVelocidadeX * diagonal), bolaPosicao.y };
+    Vector2 futuraY = { bolaPosicao.x, bolaPosicao.y + (bolaVelocidadeY * direcao) };
 
-            Vector2 dir1 = {blocos[i][j].bloco.x + TAMANHOBLOCO, blocos[i][j].bloco.y};
-            Vector2 dir2 = {blocos[i][j].bloco.x + TAMANHOBLOCO, blocos[i][j].bloco.y + ALTURABLOCO};
+    bool houveColisao = false;
 
-            // Pontos superior e inferior
-            Vector2 cima1 = {blocos[i][j].bloco.x, blocos[i][j].bloco.y + ALTURABLOCO};
-            Vector2 cima2 = {blocos[i][j].bloco.x + TAMANHOBLOCO, blocos[i][j].bloco.y + ALTURABLOCO};
-            
-            Vector2 baixo1 = {blocos[i][j].bloco.x, blocos[i][j].bloco.y};
-            Vector2 baixo2 = {blocos[i][j].bloco.x + TAMANHOBLOCO, blocos[i][j].bloco.y};
+    for (int i = 0; i < QUANTIDADELINHASBLOCOS && !houveColisao; i++) {
+        for (int j = 0; j < QUANTIDADEBLOCOS && !houveColisao; j++) {
 
-            bool bateuEsquerda = CheckCollisionCircleLine(bolaPosicaoFutura, TAMANHOBOLA, esq1, esq2);
-            bool bateuDireita = CheckCollisionCircleLine(bolaPosicaoFutura, TAMANHOBOLA, dir1, dir2);
-            bool bateuCima = CheckCollisionCircleLine(bolaPosicaoFutura, TAMANHOBOLA, cima1, cima2);
-            bool bateuBaixo = CheckCollisionCircleLine(bolaPosicaoFutura, TAMANHOBOLA, baixo1, baixo2);
+            Rectangle r = blocos[i][j].bloco;
+            if (r.x < 0) continue;
 
-            float raio = TAMANHOBOLA;
+            bool colisaoX = CheckCollisionCircleRec(futuraX, TAMANHOBOLA, r);
+            bool colisaoY = CheckCollisionCircleRec(futuraY, TAMANHOBOLA, r);
 
-            // LADO ESQUERDO
-            if (bateuEsquerda) {
-                bolaPosicao.x = blocos[i][j].bloco.x - raio;  
-                diagonal *= -1;
-            }
-            // LADO DIREITO
-            else if (bateuDireita) {
-                bolaPosicao.x = blocos[i][j].bloco.x + blocos[i][j].bloco.width + raio;
-                diagonal *= -1;
-            }
-            // TOPO
-            else if (bateuCima) {
-                bolaPosicao.y = blocos[i][j].bloco.y - raio;
-                direcao *= -1;
-            }
-            // BASE
-            else if (bateuBaixo) {
-                bolaPosicao.y = blocos[i][j].bloco.y + blocos[i][j].bloco.height + raio;
-                direcao *= -1;
-            }
+            if (colisaoX || colisaoY) {
 
-
-            if (CheckCollisionCircleRec(bolaPosicao, TAMANHOBOLA, blocos[i][j].bloco)) {
-
-                bool bateuEsquerda = CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA, esq1, esq2);
-                bool bateuDireita  = CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA, dir1, dir2);
-
-                // Teste topo/base
-                bool bateuTopo = bolaPosicao.y < blocos[i][j].bloco.y;
-                bool bateuBase = bolaPosicao.y > blocos[i][j].bloco.y + ALTURABLOCO;
-
-                if (bateuEsquerda || bateuDireita) {
-                    // Lateral
-                    diagonal *= -1;
+                if (colisaoX && !colisaoY) {
+                    // bateu na lateral
+                    diagonal = -diagonal;
                 }
-                else if (bateuTopo || bateuBase) {
-                    // Vertical
-                    direcao *= -1;
+                else if (colisaoY && !colisaoX) {
+                    // bateu por cima ou por baixo
+                    direcao = -direcao;
                 }
                 else {
-                    // Bateu na quina
-                    diagonal *= -1;
-                    direcao  *= -1;
+                    // bateu exatamente na quina → escolha a NORMAL do bloco
+                    if (fabs((bolaPosicao.x - (r.x + r.width/2))) >
+                        fabs((bolaPosicao.y - (r.y + r.height/2))))
+                        diagonal = -diagonal;
+                    else
+                        direcao = -direcao;
                 }
 
-                // Remove o bloco
-                blocos[i][j].bloco.x = -200.0f;
-                blocos[i][j].bloco.y = -200.0f;
+                blocos[i][j].bloco.x = -200;
+                blocos[i][j].bloco.y = -200;
+
+                houveColisao = true;
             }
         }
     }
+
+
+
+
 
 
 
