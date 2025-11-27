@@ -2,287 +2,298 @@
 #include <iostream>
 #include <cmath>
 #include <string>
-
 #include "fases.h"
 #include "itens.h"
 #include "ranking.h"
-
 using namespace std;
 
-// Fases
-int  faseAtual          = 1;
-int  faseMensagem       = 1;
-const int TOTAL_FASES   = 3;
-bool telaTransicaoFase  = false;
 
-// Plataforma (player)
-Vector2 plataformaPosicao     = {350.0f, 550.0f};
-Vector2 plataformaPosicaoFim  = {450.0f, 550.0f};
-Vector2 plataformaTamanho     = {100.0f, 20.0f};
-Color   cor                   = MAROON;
+enum Tela {
+    TELA_MENU,
+    TELA_DIFICULDADE,
+    TELA_RANKING,
+    TELA_NOME,
+    TELA_JOGO,
+    TELA_TRANSICAO,
+    TELA_GAMEOVER
+};
 
-// Pelota
-Vector2 bolaPosicao        = {400.0f, 539.0f};
+Tela telaAtual = TELA_MENU;
 
-// Movimentação da bola
-int   direcao         = -1;
-int   diagonal        = 1;
+
+int faseAtual = 1;
+int faseMensagem = 1;
+const int TOTAL_FASES = 3;
+bool telaTransicaoFase = false;
+
+Vector2 plataformaPosicao = {350.0f, 550.0f};
+Vector2 plataformaPosicaoFim = {450.0f, 550.0f};
+Vector2 plataformaTamanho = {100.0f, 20.0f};
+Color cor = MAROON;
+
+Vector2 bolaPosicao = {400.0f, 539.0f};
+int direcao = -1;
+int diagonal = 1;
 float bolaVelocidadeY = SPEEDBOLA;
 float bolaVelocidadeX = SPEEDBOLA;
-bool  moveDiagonal    = false;
+bool moveDiagonal = false;
 
-// Estados do jogo
-bool gameOver        = false;
-bool telaNome        = false;
-bool telaDificuldade = true;
+bool gameOver = false;
+bool telaNome = false;
+bool telaDificuldade = false;
 
-// Pontuação e vidas
 int blocosQuebrados = 0;
-int framesJogando   = 0;
-int pontuacaoFinal  = 0;
-int scoreAtual      = 0;  // score em tempo real (pontos + itens)
-int vidas           = 3;  // vidas cumulativas
+int framesJogando = 0;
+int pontuacaoFinal = 0;
+int scoreAtual = 0;
+int vidas = 3;
 
-// Nome do jogador
 string nomeJogador = "";
 
-// Dificuldade atual
 Dificuldade dificuldadeAtual = FACIL;
 
-// Reinicia o jogo (posições, blocos). Se resetTotais = true, zera pontuações e volta pra fase 1.
 void ResetGame(Blocos blocos[QUANTIDADELINHASBLOCOS][QUANTIDADEBLOCOS], bool resetTotais) {
     if (resetTotais) {
         blocosQuebrados = 0;
-        framesJogando   = 0;
-        pontuacaoFinal  = 0;
-        scoreAtual      = 0;
-        vidas           = 3;
-        faseAtual       = 1;
-        faseMensagem    = 1;
+        framesJogando = 0;
+        pontuacaoFinal = 0;
+        scoreAtual = 0;
+        vidas = 3;
+        faseAtual = 1;
+        faseMensagem = 1;
     }
 
     GameConfig cfg = GetConfig(dificuldadeAtual);
 
-    // Tamanho da plataforma conforme dificuldade
-    plataformaTamanho = { cfg.larguraPlataforma, 20.0f };
-
-    plataformaPosicao    = {350.0f, 550.0f};
+    plataformaTamanho = {cfg.larguraPlataforma, 20.0f};
+    plataformaPosicao = {350.0f, 550.0f};
     plataformaPosicaoFim = {plataformaPosicao.x + plataformaTamanho.x, plataformaPosicao.y};
 
-    bolaPosicao      = {400.0f, 539.0f};
-    direcao          = -1;
-    diagonal         = 1;
-    bolaVelocidadeY  = cfg.velocidadeBola;
-    bolaVelocidadeX  = cfg.velocidadeBola;
-    moveDiagonal     = false;
+    bolaPosicao = {400.0f, 539.0f};
+    direcao = -1;
+    diagonal = 1;
+    bolaVelocidadeY = cfg.velocidadeBola;
+    bolaVelocidadeX = cfg.velocidadeBola;
+    moveDiagonal = false;
 
-    ClearItems();                // do módulo de itens
-    ConfigurarFase(blocos,       // do módulo de fases
-                   faseAtual,
-                   cfg);
+    ClearItems();
+    ConfigurarFase(blocos, faseAtual, cfg);
 }
 
 int main() {
-    const int screenWidth  = 800;
+    const int screenWidth = 800;
     const int screenHeight = 600;
 
-    InitWindow(screenWidth, screenHeight, "Arkanoid - Raylib");
+    InitWindow(screenWidth, screenHeight, "Arkanoid — Menu Completo");
     SetTargetFPS(60);
+    SetExitKey(0);
 
-    // ===== FUNDO DE ESTRELAS =====
     static Vector2 estrelas[200];
     static bool estrelasInit = false;
-
-    // Não deixar ESC fechar automaticamente
-    SetExitKey(0);
 
     Blocos blocos[QUANTIDADELINHASBLOCOS][QUANTIDADEBLOCOS];
     ResetGame(blocos, true);
 
-    while (true) {
+    // Inicialização do fundo estrelado
+    for (int i = 0; i < 200; i++) {
+        estrelas[i] = {(float)GetRandomValue(0, screenWidth), (float)GetRandomValue(0, screenHeight)};
+    }
+    estrelasInit = true;
 
-        if (WindowShouldClose()) break;
-        if (IsKeyPressed(KEY_ESCAPE)) break;
+    while (!WindowShouldClose()) {
 
-        // Inicializa as estrelas uma vez
-        if (!estrelasInit) {
-            for (int i = 0; i < 200; i++) {
-                estrelas[i] = {
-                    (float)GetRandomValue(0, screenWidth),
-                    (float)GetRandomValue(0, screenHeight)
-                };
+        
+        // ANIMAÇÃO DO FUNDO DE ESTRELAS
+        
+        for (int i = 0; i < 200; i++) {
+            estrelas[i].y += 1.5f;
+            if (estrelas[i].y > screenHeight) {
+                estrelas[i].y = 0;
+                estrelas[i].x = (float)GetRandomValue(0, screenWidth);
             }
-            estrelasInit = true;
         }
 
-        // ===================== TELA DE DIFICULDADE =====================
-        if (telaDificuldade) {
-
-            if (IsKeyPressed(KEY_UP) || IsKeyPressed(KEY_W)) {
-                dificuldadeAtual = (Dificuldade)((((int)dificuldadeAtual) + 2) % 3); // sobe
-            }
-            if (IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_S)) {
-                dificuldadeAtual = (Dificuldade)((((int)dificuldadeAtual) + 1) % 3); // desce
-            }
-
-            if (IsKeyPressed(KEY_ENTER)) {
-                telaDificuldade = false;
-                telaNome        = true;
-                ResetGame(blocos, true);  // novo jogo
-            }
-
+        
+        //  TELA 1 — MENU INICIAL (OPÇÃO A)
+        
+        if (telaAtual == TELA_MENU) {
             BeginDrawing();
             ClearBackground(BLACK);
 
-            // Fundo de estrelas na tela de dificuldade também
-            for (int i = 0; i < 200; i++) {
-                estrelas[i].y += 1.5f;
-                if (estrelas[i].y > screenHeight) {
-                    estrelas[i].y = 0;
-                    estrelas[i].x = (float)GetRandomValue(0, screenWidth);
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
+
+            DrawText("A R K A N O I D", screenWidth/2 - 180, 80, 50, SKYBLUE);
+
+            // Botões grandes
+            Rectangle btnJogar = { screenWidth/2 - 150, 200, 300, 60 };
+            Rectangle btnDificuldade = { screenWidth/2 - 150, 300, 300, 60 };
+            Rectangle btnRanking = { screenWidth/2 - 150, 400, 300, 60 };
+
+            // Hover
+            Color hJogar = CheckCollisionPointRec(GetMousePosition(), btnJogar) ? RED : DARKGRAY;
+            Color hDif   = CheckCollisionPointRec(GetMousePosition(), btnDificuldade) ? RED : DARKGRAY;
+            Color hRank  = CheckCollisionPointRec(GetMousePosition(), btnRanking) ? RED : DARKGRAY;
+
+            DrawRectangleRec(btnJogar, hJogar);
+            DrawRectangleRec(btnDificuldade, hDif);
+            DrawRectangleRec(btnRanking, hRank);
+
+            DrawText("JOGAR", btnJogar.x + 90, btnJogar.y + 15, 30, WHITE);
+            DrawText("DIFICULDADES", btnDificuldade.x + 40, btnDificuldade.y + 15, 30, WHITE);
+            DrawText("RANKING", btnRanking.x + 90, btnRanking.y + 15, 30, WHITE);
+
+            // Clique do mouse
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                Vector2 mp = GetMousePosition();
+
+                if (CheckCollisionPointRec(mp, btnJogar)) {
+                    telaAtual = TELA_NOME;
                 }
-                DrawPixelV(estrelas[i], LIGHTGRAY);
-            }
-
-            DrawText("SELECIONE A DIFICULDADE", screenWidth/2 - 210, 120, 30, RAYWHITE);
-            DrawText("Use SETAS CIMA/BAIXO ou W/S para trocar", screenWidth/2 - 260, 170, 20, GRAY);
-            DrawText("ENTER para confirmar", screenWidth/2 - 130, 200, 20, GRAY);
-
-            const char* textoFacil   = "FACIL";
-            const char* textoMedio   = "MEDIO";
-            const char* textoDificil = "DIFICIL";
-
-            Color corFacil   = (dificuldadeAtual == FACIL)   ? RED   : DARKGRAY;
-            Color corMedio   = (dificuldadeAtual == MEDIO)   ? RED   : DARKGRAY;
-            Color corDificil = (dificuldadeAtual == DIFICIL) ? RED   : DARKGRAY;
-
-            DrawText(textoFacil,   screenWidth/2 - 50, 260, 30, corFacil);
-            DrawText(textoMedio,   screenWidth/2 - 50, 310, 30, corMedio);
-            DrawText(textoDificil, screenWidth/2 - 60, 360, 30, corDificil);
-
-            // ===== TOP 5 RANKING =====
-            vector<Score> top5 = LerRankingTop5();
-            DrawText("TOP 5 RANKING:", 40, 410, 20, YELLOW);
-
-            for (int i = 0; i < (int)top5.size(); i++) {
-                DrawText(
-                    TextFormat("%d. %s - %d",
-                               i + 1,
-                               top5[i].nome.c_str(),
-                               top5[i].pontos),
-                    40,
-                    440 + i * 25,
-                    18,
-                    RAYWHITE
-                );
+                else if (CheckCollisionPointRec(mp, btnDificuldade)) {
+                    telaAtual = TELA_DIFICULDADE;
+                }
+                else if (CheckCollisionPointRec(mp, btnRanking)) {
+                    telaAtual = TELA_RANKING;
+                }
             }
 
             EndDrawing();
             continue;
         }
+        
+        //  TELA 2 — SELEÇÃO DE DIFICULDADE
+        
+        if (telaAtual == TELA_DIFICULDADE) {
+            BeginDrawing();
+            ClearBackground(BLACK);
 
-        // ===================== TELA DE NOME =====================
-        if (telaNome) {
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
+
+            DrawText("SELECIONE A DIFICULDADE", screenWidth/2 - 220, 120, 30, RAYWHITE);
+
+            Rectangle btnF = { screenWidth/2 -150, 220, 300, 50 };
+            Rectangle btnM = { screenWidth/2 -150, 290, 300, 50 };
+            Rectangle btnD = { screenWidth/2 -150, 360, 300, 50 };
+
+            Color cF = (dificuldadeAtual == FACIL)   ? RED : DARKGRAY;
+            Color cM = (dificuldadeAtual == MEDIO)   ? RED : DARKGRAY;
+            Color cD = (dificuldadeAtual == DIFICIL) ? RED : DARKGRAY;
+
+            DrawRectangleRec(btnF, cF);
+            DrawRectangleRec(btnM, cM);
+            DrawRectangleRec(btnD, cD);
+
+            DrawText("FACIL", btnF.x + 110, btnF.y + 10, 30, WHITE);
+            DrawText("MEDIO", btnM.x + 105, btnM.y + 10, 30, WHITE);
+            DrawText("DIFICIL", btnD.x + 90, btnD.y + 10, 30, WHITE);
+
+            // clique
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                Vector2 mp = GetMousePosition();
+                if (CheckCollisionPointRec(mp, btnF)) dificuldadeAtual = FACIL;
+                if (CheckCollisionPointRec(mp, btnM)) dificuldadeAtual = MEDIO;
+                if (CheckCollisionPointRec(mp, btnD)) dificuldadeAtual = DIFICIL;
+            }
+
+            // voltar com ESC
+            if (IsKeyPressed(KEY_ESCAPE)) telaAtual = TELA_MENU;
+
+            EndDrawing();
+            continue;
+        }
+
+        
+        //  TELA 3 — RANKING CENTRALIZADO
+        
+        if (telaAtual == TELA_RANKING) {
+            BeginDrawing();
+            ClearBackground(BLACK);
+
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
+
+            DrawText("TOP 5 RANKING", screenWidth/2 - 150, 100, 40, YELLOW);
+
+            vector<Score> top5 = LerRankingTop5();
+
+            for (int i = 0; i < (int)top5.size(); i++) {
+                DrawText(TextFormat("%d. %s - %d", i+1, top5[i].nome.c_str(), top5[i].pontos),
+                         screenWidth/2 - 200, 200 + i*40, 30, RAYWHITE);
+            }
+
+            DrawText("ESC = Voltar", screenWidth/2 - 80, 500, 20, GRAY);
+
+            if (IsKeyPressed(KEY_ESCAPE)) telaAtual = TELA_MENU;
+
+            EndDrawing();
+            continue;
+        }
+
+        
+        //  TELA 4 — NOME DO JOGADOR
+        
+        if (telaAtual == TELA_NOME) {
             int key = GetKeyPressed();
             while (key > 0) {
-                if (key == KEY_BACKSPACE && !nomeJogador.empty()) {
-                    nomeJogador.pop_back();
-                }
-                else if (key >= 32 && key <= 125) {
-                    nomeJogador.push_back((char)key);
-                }
+                if (key == KEY_BACKSPACE && !nomeJogador.empty()) nomeJogador.pop_back();
+                else if (key >= 32 && key <= 125) nomeJogador.push_back((char)key);
                 key = GetKeyPressed();
             }
 
             if (IsKeyPressed(KEY_ENTER) && !nomeJogador.empty()) {
-                telaNome = false;
+                telaAtual = TELA_JOGO;
+                ResetGame(blocos, true);
             }
 
             BeginDrawing();
             ClearBackground(BLACK);
 
-            // Fundo de estrelas aqui também
-            for (int i = 0; i < 200; i++) {
-                estrelas[i].y += 1.5f;
-                if (estrelas[i].y > screenHeight) {
-                    estrelas[i].y = 0;
-                    estrelas[i].x = (float)GetRandomValue(0, screenWidth);
-                }
-                DrawPixelV(estrelas[i], LIGHTGRAY);
-            }
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
 
-            DrawText("Digite seu nome:", screenWidth/2 - 150, 200, 30, RAYWHITE);
+            DrawText("Digite seu nome:", screenWidth/2 - 150, 200, 30, WHITE);
+            DrawRectangle(screenWidth/2 -150, 250, 300, 50, DARKGRAY);
+            DrawText(nomeJogador.c_str(), screenWidth/2 -140, 260, 30, SKYBLUE);
 
-            DrawRectangle(screenWidth/2 - 150, 250, 300, 50, DARKGRAY);
-            DrawText(nomeJogador.c_str(), screenWidth/2 - 140, 260, 30, SKYBLUE);
-
-            DrawText("Pressione ENTER para continuar",
-                     screenWidth/2 - 160, 330, 20, GRAY);
+            DrawText("ENTER para continuar", screenWidth/2 -140, 330, 20, GRAY);
 
             EndDrawing();
             continue;
         }
 
-        // ===================== TELA DE TRANSIÇÃO DE FASE =====================
-        if (telaTransicaoFase) {
-            BeginDrawing();
-            ClearBackground(BLACK);
-
-            for (int i = 0; i < 200; i++) {
-                estrelas[i].y += 1.5f;
-                if (estrelas[i].y > screenHeight) {
-                    estrelas[i].y = 0;
-                    estrelas[i].x = (float)GetRandomValue(0, screenWidth);
-                }
-                DrawPixelV(estrelas[i], LIGHTGRAY);
-            }
-
-            DrawText(TextFormat("Fase %d completa!", faseMensagem - 1),
-                     screenWidth/2 - 170, 200, 30, LIME);
-            DrawText(TextFormat("Proxima fase: %d", faseMensagem),
-                     screenWidth/2 - 130, 240, 25, RAYWHITE);
-            DrawText("Pressione ENTER para continuar",
-                     screenWidth/2 - 170, 300, 20, GRAY);
-
-            if (IsKeyPressed(KEY_ENTER)) {
-                telaTransicaoFase = false;
-            }
-
-            EndDrawing();
-            continue;
-        }
-
-        // ==================== LÓGICA DO JOGO ====================
-        if (!gameOver && !telaTransicaoFase) {
+        
+        //  TELA: JOGO (LÓGICA PRINCIPAL)
+        
+        if (telaAtual == TELA_JOGO) {
+            // comportamentos equivalentes ao bloco original de lógica do jogo
+            // Nota: mantivemos todas as variáveis e chamadas originais para não alterar a jogabilidade
 
             framesJogando++;
 
             if (IsKeyDown(KEY_RIGHT) && plataformaPosicao.x < screenWidth - (plataformaTamanho.x + 10)) {
-                plataformaPosicao.x    += 10.0f;
+                plataformaPosicao.x += 10.0f;
                 plataformaPosicaoFim.x = plataformaPosicao.x + plataformaTamanho.x;
             }
             if (IsKeyDown(KEY_LEFT) && plataformaPosicao.x > 10) {
-                plataformaPosicao.x    -= 10.0f;
+                plataformaPosicao.x -= 10.0f;
                 plataformaPosicaoFim.x = plataformaPosicao.x + plataformaTamanho.x;
             }
 
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
-                                         plataformaPosicao, plataformaPosicaoFim)) {
+                                         plataformaPosicao, plataformaPosicaoFim)){
                 direcao *= -1;
 
-                if (bolaPosicao.x - plataformaPosicao.x < plataformaTamanho.x / 2.0f) {
+                if (bolaPosicao.x - plataformaPosicao.x < plataformaTamanho.x / 2.0f){
                     bolaVelocidadeX = bolaVelocidadeY *
-                                      ((plataformaTamanho.x/2.0f - (bolaPosicao.x - plataformaPosicao.x)) /
-                                       (plataformaTamanho.x/2.0f));
-                    moveDiagonal    = true;
-                    diagonal        = -1;
+                                      ((plataformaTamanho.x / 2.0f - (bolaPosicao.x - plataformaPosicao.x)) /
+                                       (plataformaTamanho.x / 2.0f));
+                    moveDiagonal = true;
+                    diagonal = -1;
                 }
-                else if (bolaPosicao.x - plataformaPosicao.x > plataformaTamanho.x / 2.0f) {
+                else if (bolaPosicao.x - plataformaPosicao.x > plataformaTamanho.x / 2.0f){
                     bolaVelocidadeX = bolaVelocidadeY *
-                                      ((bolaPosicao.x - plataformaPosicao.x - plataformaTamanho.x/2.0f) /
-                                       (plataformaTamanho.x/2.0f));
-                    moveDiagonal    = true;
-                    diagonal        = 1;
+                                      ((bolaPosicao.x - plataformaPosicao.x - plataformaTamanho.x / 2.0f) /
+                                       (plataformaTamanho.x / 2.0f));
+                    moveDiagonal = true;
+                    diagonal = 1;
                 }
             }
 
@@ -300,33 +311,34 @@ int main() {
             if (moveDiagonal)
                 bolaPosicao.x += bolaVelocidadeX * diagonal;
 
-            // Se a bola cair fora da tela -> perde vida
-            if (bolaPosicao.y - TAMANHOBOLA > screenHeight) {
+            // se a bola cair fora da tela -> perde vida
+            if (bolaPosicao.y - TAMANHOBOLA > screenHeight){
                 vidas--;
                 if (vidas <= 0) {
                     gameOver = true;
-                    int pontosTempo  = framesJogando;
+                    int pontosTempo = framesJogando;
                     int pontosBlocos = scoreAtual;
-                    pontuacaoFinal   = pontosTempo + pontosBlocos;
+                    pontuacaoFinal = pontosTempo + pontosBlocos;
                     SalvarRanking(nomeJogador, pontuacaoFinal);
+                    // muda para tela de game over
+                    telaAtual = TELA_GAMEOVER;
                 } else {
-                    plataformaPosicao    = {350.0f, 550.0f};
+                    plataformaPosicao = {350.0f, 550.0f};
                     plataformaPosicaoFim = {plataformaPosicao.x + plataformaTamanho.x, plataformaPosicao.y};
-                    bolaPosicao          = {400.0f, 539.0f};
-                    direcao              = -1;
-                    diagonal             = 1;
-                    moveDiagonal         = false;
+                    bolaPosicao = {400.0f, 539.0f};
+                    direcao = -1;
+                    diagonal = 1;
+                    moveDiagonal = false;
                 }
             }
 
-            Vector2 futuraX = { bolaPosicao.x + (bolaVelocidadeX * diagonal), bolaPosicao.y };
-            Vector2 futuraY = { bolaPosicao.x, bolaPosicao.y + (bolaVelocidadeY * direcao) };
+            Vector2 futuraX = {bolaPosicao.x + (bolaVelocidadeX * diagonal), bolaPosicao.y};
+            Vector2 futuraY = {bolaPosicao.x, bolaPosicao.y + (bolaVelocidadeY * direcao)};
 
             bool houveColisao = false;
 
-            for (int i = 0; i < QUANTIDADELINHASBLOCOS && !houveColisao; i++) {
-                for (int j = 0; j < QUANTIDADEBLOCOS && !houveColisao; j++) {
-
+            for (int i = 0; i < QUANTIDADELINHASBLOCOS && !houveColisao; i++){
+                for (int j = 0; j < QUANTIDADEBLOCOS && !houveColisao; j++){
                     if (!blocos[i][j].ativo) continue;
 
                     Rectangle r = blocos[i][j].bloco;
@@ -334,29 +346,29 @@ int main() {
                     bool colisaoX = CheckCollisionCircleRec(futuraX, TAMANHOBOLA, r);
                     bool colisaoY = CheckCollisionCircleRec(futuraY, TAMANHOBOLA, r);
 
-                    if (colisaoX || colisaoY) {
-                        if (colisaoX && !colisaoY) {
+                    if (colisaoX || colisaoY){
+                        if (colisaoX && !colisaoY){
                             diagonal = -diagonal;
                         }
-                        else if (colisaoY && !colisaoX) {
+                        else if (colisaoY && !colisaoX){
                             direcao = -direcao;
                         }
                         else {
-                            if (fabs(bolaPosicao.x - (r.x + r.width/2)) >
-                                fabs(bolaPosicao.y - (r.y + r.height/2)))
+                            if (fabs(bolaPosicao.x - (r.x + r.width / 2)) >
+                                fabs(bolaPosicao.y - (r.y + r.height / 2)))
                                 diagonal = -diagonal;
                             else
                                 direcao = -direcao;
                         }
 
                         blocos[i][j].vida--;
-                        if (blocos[i][j].vida <= 0) {
-                            blocos[i][j].ativo   = false;
+                        if (blocos[i][j].vida <= 0){
+                            blocos[i][j].ativo = false;
                             blocos[i][j].bloco.x = -200;
                             blocos[i][j].bloco.y = -200;
                             blocosQuebrados++;
                             scoreAtual += 50;
-                            TrySpawnItem(r); // módulo de itens
+                            SpawnItem(r);
                         } else {
                             if (blocos[i][j].vida == 2)
                                 blocos[i][j].cor = ORANGE;
@@ -369,13 +381,7 @@ int main() {
                 }
             }
 
-            // Atualiza itens especiais (queda + coleta)
-            Rectangle paddleRect = {
-                plataformaPosicao.x,
-                plataformaPosicao.y,
-                plataformaTamanho.x,
-                plataformaTamanho.y
-            };
+            Rectangle paddleRect = { plataformaPosicao.x, plataformaPosicao.y, plataformaTamanho.x, plataformaTamanho.y };
 
             AtualizarItens((float)screenHeight,
                            paddleRect,
@@ -386,116 +392,121 @@ int main() {
                            screenWidth,
                            scoreAtual);
 
-            // Verifica se acabou a fase
-            if (!gameOver) {
+            // verifica se acabou a fase
+            if (!gameOver){
                 int ativos = 0;
-                for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++) {
-                    for (int j = 0; j < QUANTIDADEBLOCOS; j++) {
+                for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++){
+                    for (int j = 0; j < QUANTIDADEBLOCOS; j++){
                         if (blocos[i][j].ativo) ativos++;
                     }
                 }
 
-                if (ativos == 0) {
-                    if (faseAtual < TOTAL_FASES) {
+                if (ativos == 0){
+                    if (faseAtual < TOTAL_FASES){
                         faseAtual++;
-                        faseMensagem      = faseAtual;
+                        faseMensagem = faseAtual;
                         ResetGame(blocos, false);
                         telaTransicaoFase = true;
+                        telaAtual = TELA_TRANSICAO;
                     } else {
                         gameOver = true;
-                        int pontosTempo  = framesJogando;
+                        int pontosTempo = framesJogando;
                         int pontosBlocos = scoreAtual;
-                        pontuacaoFinal   = pontosTempo + pontosBlocos;
+                        pontuacaoFinal = pontosTempo + pontosBlocos;
                         SalvarRanking(nomeJogador, pontuacaoFinal);
+                        telaAtual = TELA_GAMEOVER;
                     }
                 }
             }
-        }
-        else if (gameOver) {
-            if (IsKeyPressed(KEY_ENTER)) {
-                gameOver        = false;
-                telaDificuldade = true;
-                telaNome        = false;
-                nomeJogador.clear();
-                ResetGame(blocos, true);
-            }
-        }
 
-        // ==================== DESENHO ====================
-        BeginDrawing();
-        ClearBackground(BLACK);
+            // desenho da tela de jogo (apenas quando ainda em TELA_JOGO)
+            BeginDrawing();
+            ClearBackground(BLACK);
 
-        for (int i = 0; i < 200; i++) {
-            estrelas[i].y += 1.5f;
-            if (estrelas[i].y > screenHeight) {
-                estrelas[i].y = 0;
-                estrelas[i].x = (float)GetRandomValue(0, screenWidth);
-            }
-            DrawPixelV(estrelas[i], LIGHTGRAY);
-        }
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
 
-        if (!gameOver) {
-            DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()),
-                     20, 20, 25, RAYWHITE);
+            DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()), 20, 20, 25, RAYWHITE);
 
             const char* textoDif;
-            switch (dificuldadeAtual) {
-                case FACIL:   textoDif = "FACIL";   break;
-                case MEDIO:   textoDif = "MEDIO";   break;
-                case DIFICIL: textoDif = "DIFICIL"; break;
-            }
-            DrawText(TextFormat("Dificuldade: %s", textoDif), 20, 50, 20, GRAY);
-            DrawText(TextFormat("Fase: %d/%d", faseAtual, TOTAL_FASES),
-                     20, 80, 20, GRAY);
+            switch (dificuldadeAtual){ case FACIL: textoDif = "FACIL"; break; case MEDIO: textoDif = "MEDIO"; break; case DIFICIL: textoDif = "DIFICIL"; break; }
 
-            DrawText(TextFormat("Vidas: %d", vidas),
-                     20, 110, 20, RED);
-
-            DrawText(TextFormat("Blocos quebrados: %d", blocosQuebrados),
-                     550, 20, 20, RAYWHITE);
-            DrawText(TextFormat("Tempo: %.1fs", framesJogando/60.0f),
-                     550, 50, 20, RAYWHITE);
-
-            DrawText(TextFormat("Score: %d", scoreAtual),
-                     550, 80, 20, SKYBLUE);
-
-            for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++) {
-                for (int j = 0; j < QUANTIDADEBLOCOS; j++) {
+            for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++){
+                for (int j = 0; j < QUANTIDADEBLOCOS; j++){
                     if (!blocos[i][j].ativo) continue;
-
-                    DrawRectangle(blocos[i][j].bloco.x,
-                                  blocos[i][j].bloco.y,
-                                  blocos[i][j].bloco.width,
-                                  blocos[i][j].bloco.height,
-                                  blocos[i][j].cor);
+                    DrawRectangle(blocos[i][j].bloco.x, blocos[i][j].bloco.y, blocos[i][j].bloco.width, blocos[i][j].bloco.height, blocos[i][j].cor);
                 }
             }
 
-            // Desenha itens especiais
-            for (int k = 0; k < MAX_ITENS; k++) {
+            DrawText(TextFormat("Dificuldade: %s", textoDif), 20, 20, 20, RAYWHITE);
+            DrawText(TextFormat("Fase: %d/%d", faseAtual, TOTAL_FASES), 20, 50, 20, RAYWHITE);
+            DrawText(TextFormat("Vidas: %d", vidas), 20, 80, 20, RED);
+            DrawText(TextFormat("Blocos quebrados: %d", blocosQuebrados), 550, 20, 20, RAYWHITE);
+            DrawText(TextFormat("Tempo: %.1fs", framesJogando / 60.0f), 550, 50, 20, RAYWHITE);
+            DrawText(TextFormat("Score: %d", scoreAtual), 550, 80, 20, SKYBLUE);
+
+            for (int k = 0; k < MAX_ITENS; k++){
                 if (!itens[k].ativo) continue;
                 DrawCircleV(itens[k].pos, itens[k].radius, itens[k].cor);
             }
 
             DrawRectangleV(plataformaPosicao, plataformaTamanho, cor);
             DrawCircleV(bolaPosicao, TAMANHOBOLA, GREEN);
+
+            EndDrawing();
+            continue;
         }
-        else {
+
+        
+        //  TELA: TRANSIÇÃO DE FASE
+        
+        if (telaAtual == TELA_TRANSICAO) {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
+
+            DrawText(TextFormat("Fase %d completa!", faseMensagem - 1),
+                     screenWidth / 2 - 170, 200, 30, LIME);
+            DrawText(TextFormat("Proxima fase: %d", faseMensagem),
+                     screenWidth / 2 - 130, 240, 25, RAYWHITE);
+            DrawText("Pressione ENTER para continuar",
+                     screenWidth / 2 - 170, 300, 20, GRAY);
+
+            if (IsKeyPressed(KEY_ENTER)) {
+                telaTransicaoFase = false;
+                telaAtual = TELA_JOGO;
+            }
+
+            EndDrawing();
+            continue;
+        }
+
+        
+        //  TELA: GAME OVER
+        
+        if (telaAtual == TELA_GAMEOVER) {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            for (int i = 0; i < 200; i++) DrawPixelV(estrelas[i], LIGHTGRAY);
+
             DrawText("GAME OVER", 250, 120, 60, RED);
-
-            DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()),
-                     300, 200, 25, RAYWHITE);
-
-            DrawText(TextFormat("Pontuacao final: %d", pontuacaoFinal),
-                     250, 260, 30, LIME);
-
+            DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()), 300, 200, 25, RAYWHITE);
+            DrawText(TextFormat("Pontuacao final: %d", pontuacaoFinal), 250, 260, 30, LIME);
             DrawText("ENTER = Voltar ao menu", 260, 330, 20, GRAY);
-            DrawText("ESC = Sair",              340, 360, 20, GRAY);
+            DrawText("ESC = Sair", 340, 360, 20, GRAY);
+
+            if (IsKeyPressed(KEY_ENTER)){
+                gameOver = false;
+                telaAtual = TELA_MENU;
+                telaDificuldade = false;
+                telaNome = false;
+                nomeJogador.clear();
+                faseAtual = 1;
+                ResetGame(blocos, true);
+            }
+
+            EndDrawing();
+            continue;
         }
-
-        EndDrawing();
-    }
-
-    CloseWindow();
-    return 0;
+        }
 }
+
