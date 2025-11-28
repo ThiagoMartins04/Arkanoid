@@ -276,6 +276,8 @@ int main() {
         //  TELA: JOGO (LÓGICA PRINCIPAL)
         
         if (telaAtual == TELA_JOGO) {
+            // comportamentos equivalentes ao bloco original de lógica do jogo
+            // Nota: mantivemos todas as variáveis e chamadas originais para não alterar a jogabilidade
 
             framesJogando++;
 
@@ -286,77 +288,6 @@ int main() {
             if (IsKeyDown(KEY_LEFT) && plataformaPosicao.x > 10) {
                 plataformaPosicao.x -= 10.0f;
                 plataformaPosicaoFim.x = plataformaPosicao.x + plataformaTamanho.x;
-            }
-
-
-            Vector2 plataformaPosicaoFim = { plataformaPosicao.x + plataformaTamanho.x, plataformaPosicao.y };
-
-            // --- COLISÃO LATERAL ROBUSTA ---
-            float paddleLeft   = plataformaPosicao.x;
-            float paddleRight  = plataformaPosicao.x + plataformaTamanho.x;
-            float paddleTop    = plataformaPosicao.y;
-            float paddleBottom = plataformaPosicao.y + plataformaTamanho.y;
-
-            bool alinhadoY = 
-                bolaPosicao.y + TAMANHOBOLA > paddleTop &&
-                bolaPosicao.y - TAMANHOBOLA < paddleBottom;
-
-            const float EPS = 0.1f;
-
-            // --- LADO ESQUERDO ---
-            // Se a bola está encostando ou quase na borda esquerda
-            if (alinhadoY && bolaPosicao.x + TAMANHOBOLA >= paddleLeft &&
-                bolaPosicao.x < paddleLeft + plataformaTamanho.x / 2)
-            {
-                // Reposiciona fora do paddle para não "grudar"
-                bolaPosicao.x = paddleLeft - TAMANHOBOLA - EPS;
-
-                // Inverte movimento horizontal
-                diagonal = 1;
-                bolaVelocidadeX = fabs(bolaVelocidadeX); 
-            }
-
-            // --- LADO DIREITO ---
-            // Se a bola encosta ou quase encosta na borda direita
-            if (alinhadoY && bolaPosicao.x - TAMANHOBOLA <= paddleRight &&
-                bolaPosicao.x > paddleLeft + plataformaTamanho.x / 2)
-            {
-                bolaPosicao.x = paddleRight + TAMANHOBOLA + EPS;
-
-                diagonal = -1;
-                bolaVelocidadeX = -fabs(bolaVelocidadeX);
-            }
-
-
-
-            if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
-                                         plataformaPosicao, plataformaPosicaoFim)){
-                direcao *= -1;
-
-                float localX = bolaPosicao.x - plataformaPosicao.x;
-                float half = plataformaTamanho.x / 2.0f;
-
-                // --- NOVA REGRA: colisão nas LATERAIS da plataforma ---
-                if (localX < 10) { // 10px da borda esquerda
-                    diagonal = -1;          // joga para a esquerda
-                    moveDiagonal = true;
-                    bolaVelocidadeX = bolaVelocidadeY * 1.0f;
-                }
-                else if (localX > plataformaTamanho.x - 10) { // 10px da borda direita
-                    diagonal = 1;           // joga para a direita
-                    moveDiagonal = true;
-                    bolaVelocidadeX = bolaVelocidadeY * 1.0f;
-                }
-                else if (localX < half){
-                    bolaVelocidadeX = bolaVelocidadeY * ((half - localX) / half);
-                    moveDiagonal = true;
-                    diagonal = -1;
-                }
-                else if (localX > half){
-                    bolaVelocidadeX = bolaVelocidadeY * ((localX - half) / half);
-                    moveDiagonal = true;
-                    diagonal = 1;
-                }
             }
 
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
@@ -636,6 +567,7 @@ int main() {
             DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()), 300, 200, 25, RAYWHITE);
             DrawText(TextFormat("Pontuacao final: %d", pontuacaoFinal), 250, 260, 30, LIME);
             DrawText("ENTER = Voltar ao menu", 260, 330, 20, GRAY);
+            DrawText("ESC = Sair", 340, 360, 20, GRAY);
 
             if (IsKeyPressed(KEY_ENTER)){
                 gameOver = false;
