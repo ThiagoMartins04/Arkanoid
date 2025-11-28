@@ -87,6 +87,19 @@ int main() {
     InitWindow(screenWidth, screenHeight, "Arkanoid — Menu Completo");
     SetTargetFPS(60);
     SetExitKey(0);
+    InitAudioDevice(); // inicia o som 
+
+    Sound somToque = LoadSound("assents/somBatida.wav");
+
+    Texture2D texBloco = LoadTexture("assents/bloco.png");
+    Texture2D texBola  = LoadTexture("assents/bola.png");
+    Texture2D texVida  = LoadTexture("assents/vidaextra.png");
+    Texture2D texPadUp = LoadTexture("assents/aumentaBase.png");
+    Texture2D texPadDown = LoadTexture("assents/diminiuBase.png");
+    Texture2D texScore   = LoadTexture("assents/pontuacao.png");
+    Texture2D texB1 = LoadTexture("assents/blocoB1.png");
+    Texture2D texB2 = LoadTexture("assents/blocoB2.png");
+
 
     static Vector2 estrelas[200];
     static bool estrelasInit = false;
@@ -129,7 +142,7 @@ int main() {
             Rectangle btnDificuldade = { screenWidth/2 - 150, 300, 300, 60 };
             Rectangle btnRanking = { screenWidth/2 - 150, 400, 300, 60 };
 
-            // Hover
+        
             Color hJogar = CheckCollisionPointRec(GetMousePosition(), btnJogar) ? RED : DARKGRAY;
             Color hDif   = CheckCollisionPointRec(GetMousePosition(), btnDificuldade) ? RED : DARKGRAY;
             Color hRank  = CheckCollisionPointRec(GetMousePosition(), btnRanking) ? RED : DARKGRAY;
@@ -263,8 +276,6 @@ int main() {
         //  TELA: JOGO (LÓGICA PRINCIPAL)
         
         if (telaAtual == TELA_JOGO) {
-            // comportamentos equivalentes ao bloco original de lógica do jogo
-            // Nota: mantivemos todas as variáveis e chamadas originais para não alterar a jogabilidade
 
             framesJogando++;
 
@@ -277,39 +288,124 @@ int main() {
                 plataformaPosicaoFim.x = plataformaPosicao.x + plataformaTamanho.x;
             }
 
+
+            Vector2 plataformaPosicaoFim = { plataformaPosicao.x + plataformaTamanho.x, plataformaPosicao.y };
+
+            // --- COLISÃO LATERAL ROBUSTA ---
+            float paddleLeft   = plataformaPosicao.x;
+            float paddleRight  = plataformaPosicao.x + plataformaTamanho.x;
+            float paddleTop    = plataformaPosicao.y;
+            float paddleBottom = plataformaPosicao.y + plataformaTamanho.y;
+
+            bool alinhadoY = 
+                bolaPosicao.y + TAMANHOBOLA > paddleTop &&
+                bolaPosicao.y - TAMANHOBOLA < paddleBottom;
+
+            const float EPS = 0.1f;
+
+            // --- LADO ESQUERDO ---
+            // Se a bola está encostando ou quase na borda esquerda
+            if (alinhadoY && bolaPosicao.x + TAMANHOBOLA >= paddleLeft &&
+                bolaPosicao.x < paddleLeft + plataformaTamanho.x / 2)
+            {
+                // Reposiciona fora do paddle para não "grudar"
+                bolaPosicao.x = paddleLeft - TAMANHOBOLA - EPS;
+
+                // Inverte movimento horizontal
+                diagonal = 1;
+                bolaVelocidadeX = fabs(bolaVelocidadeX); 
+            }
+
+            // --- LADO DIREITO ---
+            // Se a bola encosta ou quase encosta na borda direita
+            if (alinhadoY && bolaPosicao.x - TAMANHOBOLA <= paddleRight &&
+                bolaPosicao.x > paddleLeft + plataformaTamanho.x / 2)
+            {
+                bolaPosicao.x = paddleRight + TAMANHOBOLA + EPS;
+
+                diagonal = -1;
+                bolaVelocidadeX = -fabs(bolaVelocidadeX);
+            }
+
+
+
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
                                          plataformaPosicao, plataformaPosicaoFim)){
                 direcao *= -1;
 
-                if (bolaPosicao.x - plataformaPosicao.x < plataformaTamanho.x / 2.0f){
-                    bolaVelocidadeX = bolaVelocidadeY *
-                                      ((plataformaTamanho.x / 2.0f - (bolaPosicao.x - plataformaPosicao.x)) /
-                                       (plataformaTamanho.x / 2.0f));
+                float localX = bolaPosicao.x - plataformaPosicao.x;
+                float half = plataformaTamanho.x / 2.0f;
+
+                // --- NOVA REGRA: colisão nas LATERAIS da plataforma ---
+                if (localX < 10) { // 10px da borda esquerda
+                    diagonal = -1;          // joga para a esquerda
+                    moveDiagonal = true;
+                    bolaVelocidadeX = bolaVelocidadeY * 1.0f;
+                }
+                else if (localX > plataformaTamanho.x - 10) { // 10px da borda direita
+                    diagonal = 1;           // joga para a direita
+                    moveDiagonal = true;
+                    bolaVelocidadeX = bolaVelocidadeY * 1.0f;
+                }
+                else if (localX < half){
+                    bolaVelocidadeX = bolaVelocidadeY * ((half - localX) / half);
                     moveDiagonal = true;
                     diagonal = -1;
                 }
-                else if (bolaPosicao.x - plataformaPosicao.x > plataformaTamanho.x / 2.0f){
-                    bolaVelocidadeX = bolaVelocidadeY *
-                                      ((bolaPosicao.x - plataformaPosicao.x - plataformaTamanho.x / 2.0f) /
-                                       (plataformaTamanho.x / 2.0f));
+                else if (localX > half){
+                    bolaVelocidadeX = bolaVelocidadeY * ((localX - half) / half);
                     moveDiagonal = true;
                     diagonal = 1;
                 }
             }
 
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
-                                         {0.0f, 10.0f}, {800.0f, 10.0f}))
+                                         plataformaPosicao, plataformaPosicaoFim)){
+            
+                PlaySound(somToque);
+
                 direcao *= -1;
+                
+
+                if (bolaPosicao.x - plataformaPosicao.x < plataformaTamanho.x / 2.0f){
+                    
+                    bolaVelocidadeX = bolaVelocidadeY *
+                                      ((plataformaTamanho.x / 2.0f - (bolaPosicao.x - plataformaPosicao.x)) /
+                                       (plataformaTamanho.x / 2.0f));
+                    moveDiagonal = true;
+                    diagonal = -1;
+                    
+                }
+                else if (bolaPosicao.x - plataformaPosicao.x > plataformaTamanho.x / 2.0f){
+                   
+                    bolaVelocidadeX = bolaVelocidadeY *
+                                      ((bolaPosicao.x - plataformaPosicao.x - plataformaTamanho.x / 2.0f) /
+                                       (plataformaTamanho.x / 2.0f));
+                    moveDiagonal = true;
+                    diagonal = 1;
+                    
+                }
+            }
+
+            if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
+                                         {0.0f, 10.0f}, {800.0f, 10.0f}))
+                                         
+                direcao *= -1;
+                PlaySound(somToque);
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
                                          {10.0f, 0.0f}, {10.0f, 600.0f}))
+                                         
                 diagonal = 1;
+                PlaySound(somToque);
             if (CheckCollisionCircleLine(bolaPosicao, TAMANHOBOLA,
                                          {790.0f, 0.0f}, {790.0f, 600.0f}))
                 diagonal = -1;
+                PlaySound(somToque);
 
             bolaPosicao.y += bolaVelocidadeY * direcao;
             if (moveDiagonal)
                 bolaPosicao.x += bolaVelocidadeX * diagonal;
+                
 
             // se a bola cair fora da tela -> perde vida
             if (bolaPosicao.y - TAMANHOBOLA > screenHeight){
@@ -345,10 +441,13 @@ int main() {
 
                     bool colisaoX = CheckCollisionCircleRec(futuraX, TAMANHOBOLA, r);
                     bool colisaoY = CheckCollisionCircleRec(futuraY, TAMANHOBOLA, r);
+                    
 
                     if (colisaoX || colisaoY){
+                        PlaySound(somToque);
                         if (colisaoX && !colisaoY){
                             diagonal = -diagonal;
+
                         }
                         else if (colisaoY && !colisaoX){
                             direcao = -direcao;
@@ -433,7 +532,37 @@ int main() {
             for (int i = 0; i < QUANTIDADELINHASBLOCOS; i++){
                 for (int j = 0; j < QUANTIDADEBLOCOS; j++){
                     if (!blocos[i][j].ativo) continue;
-                    DrawRectangle(blocos[i][j].bloco.x, blocos[i][j].bloco.y, blocos[i][j].bloco.width, blocos[i][j].bloco.height, blocos[i][j].cor);
+                    float scale;
+
+                    if (blocos[i][j].vida == blocos[i][j].vidaMax) {
+                    
+                        scale = blocos[i][j].bloco.width / (float)texBloco.width;
+                        DrawTextureEx(
+                            texBloco,
+                            { blocos[i][j].bloco.x, blocos[i][j].bloco.y },
+                            0.0f,
+                            scale,
+                            WHITE
+                        );
+                    }
+                    else if (blocos[i][j].vida == 2) {
+                        scale = blocos[i][j].bloco.width / (float)texB1.width;
+                        DrawTextureEx(texB1,
+                            { blocos[i][j].bloco.x, blocos[i][j].bloco.y },
+                            0.0f,
+                            scale,
+                            WHITE
+                        );
+                    }
+                    else if (blocos[i][j].vida == 1) {
+                        scale = blocos[i][j].bloco.width / (float)texB2.width;
+                        DrawTextureEx(texB2,
+                            { blocos[i][j].bloco.x, blocos[i][j].bloco.y },
+                            0.0f,
+                            scale,
+                            WHITE
+                        );
+                    }
                 }
             }
 
@@ -444,13 +573,28 @@ int main() {
             DrawText(TextFormat("Tempo: %.1fs", framesJogando / 60.0f), 550, 50, 20, RAYWHITE);
             DrawText(TextFormat("Score: %d", scoreAtual), 550, 80, 20, SKYBLUE);
 
-            for (int k = 0; k < MAX_ITENS; k++){
+           for (int k = 0; k < MAX_ITENS; k++){
                 if (!itens[k].ativo) continue;
-                DrawCircleV(itens[k].pos, itens[k].radius, itens[k].cor);
-            }
 
+                Texture2D texItem;
+
+                switch (itens[k].tipo) {
+                    case ITEM_VIDA:     texItem = texVida; break;
+                    case ITEM_PAD_UP:   texItem = texPadUp; break;
+                    case ITEM_PAD_DOWN: texItem = texPadDown; break;
+                    case ITEM_SCORE:    texItem = texScore; break;
+                }
+
+                DrawTexture(
+                    texItem,
+                    itens[k].pos.x - texItem.width / 2,
+                    itens[k].pos.y - texItem.height / 2,
+                    WHITE
+                );
+            }
             DrawRectangleV(plataformaPosicao, plataformaTamanho, cor);
-            DrawCircleV(bolaPosicao, TAMANHOBOLA, GREEN);
+            DrawTextureEx(texBola, {bolaPosicao.x - texBola.width/2, bolaPosicao.y - texBola.height/2}, 0.0f, 1.0f, WHITE);//desenha a bola
+
 
             EndDrawing();
             continue;
@@ -492,7 +636,6 @@ int main() {
             DrawText(TextFormat("Jogador: %s", nomeJogador.c_str()), 300, 200, 25, RAYWHITE);
             DrawText(TextFormat("Pontuacao final: %d", pontuacaoFinal), 250, 260, 30, LIME);
             DrawText("ENTER = Voltar ao menu", 260, 330, 20, GRAY);
-            DrawText("ESC = Sair", 340, 360, 20, GRAY);
 
             if (IsKeyPressed(KEY_ENTER)){
                 gameOver = false;
@@ -506,6 +649,8 @@ int main() {
 
             EndDrawing();
             continue;
+            UnloadSound(somToque);
+            CloseAudioDevice();
         }
         }
 }

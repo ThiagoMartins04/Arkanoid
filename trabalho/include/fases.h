@@ -17,9 +17,10 @@ enum Dificuldade { FACIL = 0, MEDIO, DIFICIL };
 // Blocos das fases
 struct Blocos {
     Rectangle bloco;
-    Color     cor;
-    bool      ativo;
-    int       vida;
+    Color cor;
+    bool ativo;
+    int vidaMax;
+    int vida;
 };
 
 // Configuração geral conforme dificuldade

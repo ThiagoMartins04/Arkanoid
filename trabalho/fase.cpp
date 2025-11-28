@@ -44,7 +44,8 @@ void ConfigurarFase(Blocos blocos[QUANTIDADELINHASBLOCOS][QUANTIDADEBLOCOS], int
             if (faseAtual == 1) {
                 if (i < 2) {
                     blocos[i][j].ativo = true;
-                    blocos[i][j].vida  = vidaBase;
+                    blocos[i][j].vida = vidaBase;
+                    blocos[i][j].vidaMax = vidaBase;
                     if ((i + j) % 2 == 0)
                         blocos[i][j].cor = RED;//intercala entre vermelho e azul 
                     else
@@ -63,7 +64,8 @@ void ConfigurarFase(Blocos blocos[QUANTIDADELINHASBLOCOS][QUANTIDADEBLOCOS], int
 
                 if (ativoAqui) {
                     blocos[i][j].ativo = true;
-                    blocos[i][j].vida  = vidaBase;
+                    blocos[i][j].vida = vidaBase;
+                    blocos[i][j].vidaMax = vidaBase;
                     if ((i + j) % 2 == 0)
                         blocos[i][j].cor = GREEN;//intercala entre verde e laranja 
                     else
@@ -84,7 +86,8 @@ void ConfigurarFase(Blocos blocos[QUANTIDADELINHASBLOCOS][QUANTIDADEBLOCOS], int
 
                 if (ativoAqui) {
                     blocos[i][j].ativo = true;
-                    blocos[i][j].vida  = vidaBase;
+                    blocos[i][j].vida = vidaBase;
+                    blocos[i][j].vidaMax = vidaBase;
 
                     if (i == 0)      blocos[i][j].cor = PURPLE;
                     else if (i == 1) blocos[i][j].cor = GOLD;
